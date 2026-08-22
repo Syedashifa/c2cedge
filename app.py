@@ -282,7 +282,7 @@ async def chat_stream(request: Request):
         final_answer = ""
 
         try:
-            db_messages = get_chat_history(thread_id)
+            db_messages = get_chat_history(thread_id)[-6:]
             formatted_messages = []
             for msg in db_messages:
                 if msg.role == "user":

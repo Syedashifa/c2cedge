@@ -74,7 +74,10 @@ def read_file_text(file_path: str) -> str:
     if suffix in [".txt", ".md", ".py", ".csv"]:
         return path.read_text(encoding="utf-8", errors="ignore")
 
-    raise ValueError("Unsupported file type. Upload PDF, DOCX, TXT, MD, PY, or CSV.")
+    if suffix in [".jpg", ".jpeg", ".png", ".webp"]:
+        return f"Image file uploaded: {path.name}. Screenshot claim OCR & visual deepfake evidence target."
+
+    raise ValueError("Unsupported file type. Upload JPEG, JPG, PNG, WEBP, PDF, DOCX, TXT, MD, PY, or CSV.")
 
 
 
