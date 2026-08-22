@@ -313,6 +313,15 @@ async def chat_stream(request: Request):
                     final_answer += token
                     yield sse_data({"token": token})
 
+            if not final_answer.strip():
+                state = await agent.aget_state(config)
+                if state and state.values.get("messages"):
+                    last_msg = state.values["messages"][-1]
+                    if isinstance(last_msg, AIMessage):
+                        final_answer = extract_text_from_chunk(last_msg)
+                        if final_answer:
+                            yield sse_data({"token": final_answer})
+
             if final_answer.strip():
                 save_chat_message(thread_id, "assistant", final_answer)
 
@@ -339,18 +348,4 @@ async def chat_stream(request: Request):
 if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", 8000))
-    uvicorn.run(
-        "app:app",
-        host=host,
-        port=port,
-        reload=True,
-        reload_excludes=[
-            "data/*",
-            "chroma_db/*",
-            "uploads/*",
-            "*.db",
-            "*.sqlite",
-            "*.sqlite-journal",
-            "__pycache__/*",
-        ]
-    )
+    uvicorn.run(app, host=host, port=port)

@@ -12,7 +12,6 @@ os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from pypdf import PdfReader
 import docx2txt
@@ -53,7 +52,6 @@ def get_vectorstore():
     return _vectorstore
 
 
-
 def read_file_text(file_path: str) -> str:
     path = Path(file_path)
     suffix = path.suffix.lower()
@@ -61,11 +59,9 @@ def read_file_text(file_path: str) -> str:
     if suffix == ".pdf":
         reader = PdfReader(file_path)
         text = ""
-
         for page in reader.pages:
             text += page.extract_text() or ""
             text += "\n"
-
         return text
 
     if suffix == ".docx":
@@ -80,6 +76,16 @@ def read_file_text(file_path: str) -> str:
     raise ValueError("Unsupported file type. Upload JPEG, JPG, PNG, WEBP, PDF, DOCX, TXT, MD, PY, or CSV.")
 
 
+def split_text_into_chunks(text: str, chunk_size: int = 900, chunk_overlap: int = 150) -> List[str]:
+    """Lightweight fast text splitter without heavy scipy/nltk dependencies."""
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk)
+        start += chunk_size - chunk_overlap
+    return chunks if chunks else [text]
 
 
 def add_document_to_rag(file_path: str, thread_id: str):
@@ -88,12 +94,7 @@ def add_document_to_rag(file_path: str, thread_id: str):
     if not text.strip():
         raise ValueError("No text could be extracted from this file.")
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=900,
-        chunk_overlap=150
-    )
-
-    chunks = splitter.split_text(text)
+    chunks = split_text_into_chunks(text, chunk_size=900, chunk_overlap=150)
 
     docs: List[Document] = [
         Document(
@@ -112,9 +113,6 @@ def add_document_to_rag(file_path: str, thread_id: str):
         "filename": Path(file_path).name,
         "chunks": len(docs)
     }
-
-
-
 
 
 def retrieve_from_rag(query: str, thread_id: str, k: int = 4) -> str:
