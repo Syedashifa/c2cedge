@@ -52,26 +52,38 @@ def detect_deepfake_media(media_input: str, media_type: str = "auto") -> str:
 
     output = []
     output.append(f"### {verdict}")
-    output.append(f"- 🎛️ **Overall Synthetic Deepfake Score:** `{score}%`")
-    output.append(f"- 📁 **Analyzed Target:** *\"{media_input}\"*\n")
+    output.append(f"**Target Media:** *\"{media_input}\"*\n")
     
-    output.append("#### 🔬 Multi-Modal API Inspection Breakdown:")
-    
-    # Hive AI
+    # 1. EVIDENCE
+    output.append("#### 📑 1. FORENSIC EVIDENCE & MULTI-MODAL BREAKDOWN")
     hive = breakdown.get("hive_image", {})
-    output.append(f"- 🐝 **Hive AI (Visual Deepfakes):** Status `{hive.get('status')}` | Deepfake Confidence: `{hive.get('confidence', 0)*100:.1f}%`")
+    output.append(f"- 🐝 **Hive AI Visual Inspection:** Status `{hive.get('status')}` | Deepfake Pattern: `{hive.get('is_deepfake')}`")
     
-    # Reality Defender
     rd = breakdown.get("reality_defender_video", {})
-    output.append(f"- 🛡️ **Reality Defender (Video Scan):** Verdict `{rd.get('verdict')}` | Manipulation Score: `{rd.get('score', 0)*100:.1f}%`")
+    output.append(f"- 🛡️ **Reality Defender Video Scan:** Scan Status `{rd.get('status')}` | Verdict: `{rd.get('verdict')}`")
     
-    # Resemble AI
     res = breakdown.get("resemble_voice", {})
-    output.append(f"- 🎙️ **Resemble AI (Voice Clone Guard):** Synthetic Voice: `{res.get('is_synthetic_voice')}` | Confidence: `{res.get('confidence', 0)*100:.1f}%`")
+    output.append(f"- 🎙️ **Resemble AI Voice Analysis:** Status `{res.get('status')}` | Neural Voice Clone: `{res.get('is_synthetic_voice')}`")
     
-    # EasyOCR
     ocr = breakdown.get("easy_ocr", {})
-    output.append(f"- 📄 **EasyOCR Screenshot Engine:** Extracted Text: `{ocr.get('extracted_text')[:80]}`")
+    output.append(f"- 📄 **EasyOCR Screenshot Claim Extraction:** Extracted Text: *\"{ocr.get('extracted_text')[:100]}\"*")
+
+    # 2. CONFIDENCE
+    output.append("\n#### 🎯 2. CONFIDENCE METRICS")
+    output.append(f"- 🎛️ **Overall Synthetic Deepfake Probability:** `{score}%`")
+    output.append(f"- 🐝 **Hive AI Visual Model Confidence:** `{hive.get('confidence', 0)*100:.1f}%`")
+    output.append(f"- 🛡️ **Reality Defender Temporal Manipulation Score:** `{rd.get('score', 0)*100:.1f}%`")
+    output.append(f"- 🎙️ **Resemble AI Voice Authenticity Confidence:** `{res.get('confidence', 0)*100:.1f}%`")
+
+    # 3. UNCERTAINTY
+    output.append("\n#### ⚖️ 3. UNCERTAINTY & FORENSIC LIMITATIONS")
+    if score > 80:
+        output.append("- 🔴 **High Synthetic Certainty:** Multiple detection layers independently confirmed generative AI artifacts.")
+    elif 40 <= score <= 80:
+        output.append("- ⚠️ **Moderate Uncertainty (Gray Zone):** Mixed indicators detected. Requires cross-referencing with primary source context.")
+    else:
+        output.append("- 🟢 **Low Synthetic Risk:** Media signature consistent with authentic capture.")
+    output.append("- 📌 *Compression noise, low video resolution, and heavy re-encoding can introduce marginal spectral artifacts.*")
 
     return "\n".join(output)
 
@@ -177,33 +189,50 @@ def trace_claim_lineage(claim_or_url: str, source_type: str = "text") -> str:
         except Exception:
             pass
 
+    # Step 5: Explainer Agent - Format output into Trust Card (Evidence + Confidence + Uncertainty)
     trust_badge = graph_res["trust_badge"]
     summary_headline = graph_res["summary_headline"]
     ind_count = graph_res["independent_origins_count"]
     tot_count = graph_res["total_sources_count"]
 
+    # Build Markdown Trust Card (Explicitly: Evidence + Confidence + Uncertainty)
     trust_card_md = []
     trust_card_md.append(f"### {trust_badge}")
-    trust_card_md.append(f"**Claim Analysis:** *\"{clean_claim[:120]}\"*")
-    trust_card_md.append(f"> **Summary:** {summary_headline}\n")
-    trust_card_md.append(f"- 📊 **Independent Confirmations:** `{ind_count}` of `{tot_count}` total sources")
+    trust_card_md.append(f"**Claim Analysis:** *\"{clean_claim[:120]}\"*\n")
+    trust_card_md.append(f"> **Verdict Summary:** {summary_headline}\n")
+
+    # 1. EVIDENCE
+    trust_card_md.append("#### 📑 1. EVIDENCE & CITATIONS")
+    trust_card_md.append(f"- 📊 **Independent Confirmations:** `{ind_count}` true root source{'s' if ind_count != 1 else ''} out of `{tot_count}` total scraped articles")
+    for node in graph_res["nodes"]:
+        origin_tag = " [PRIMARY ROOT ORIGIN]" if node["is_independent_origin"] else " [COPY / RE-PUBLISHER]"
+        trust_card_md.append(f"- **{node['title']}** ({node['domain']}){origin_tag}\n  🔗 [View Source Citation]({node['url']})")
 
     if graph_res["mutations"]:
-        trust_card_md.append("\n#### ⚠️ Fact Mutation Log:")
+        trust_card_md.append("\n#### 🚩 FACT MUTATION DRIFT LOG")
         for mut in graph_res["mutations"]:
-            trust_card_md.append(f"- 🚩 **[{mut['type']}]**: {mut['description']}")
+            trust_card_md.append(f"- ⚠️ **[{mut['type']}]**: {mut['description']}")
 
-    trust_card_md.append("\n#### 🔬 Forensic Lineage Graph:")
-    for edge in graph_res["edges"]:
-        trust_card_md.append(
-            f"- `[{edge['relationship'].upper()}]` Edge confidence: `{edge['confidence']*100:.1f}%` "
-            f"(Embedding sim: `{edge['embedding_similarity']}`, 3-gram overlap: `{edge['ngram_overlap']}`)"
-        )
+    # 2. CONFIDENCE
+    trust_card_md.append("\n#### 🎯 2. CONFIDENCE METRICS (Trained XGBoost ML Model)")
+    if graph_res["edges"]:
+        for edge in graph_res["edges"]:
+            trust_card_md.append(
+                f"- `[{edge['relationship'].upper()}]` Edge Copy Probability: `{edge['confidence']*100:.1f}%` "
+                f"(Embedding Sim: `{edge['embedding_similarity']}`, 3-Gram Overlap: `{edge['ngram_overlap']}`)"
+            )
+    else:
+        trust_card_md.append("- ℹ️ No copy relationships detected between sources (Independent coverage).")
 
-    trust_card_md.append("\n#### 📚 Discovered Sources & Chain:")
-    for node in graph_res["nodes"]:
-        origin_tag = " [PRIMARY ORIGIN]" if node["is_independent_origin"] else " [COPY / AGGREGATOR]"
-        trust_card_md.append(f"- **{node['title']}** ({node['domain']}){origin_tag}\n  🔗 [View Source]({node['url']})")
+    # 3. UNCERTAINTY & LIMITATIONS
+    trust_card_md.append("\n#### ⚖️ 3. UNCERTAINTY & FORENSIC LIMITATIONS")
+    if ind_count == 0:
+        trust_card_md.append("- 🔴 **High Uncertainty:** Claim spreads organically online with no single traceable primary source.")
+    elif graph_res.get("need_re_search"):
+        trust_card_md.append("- ⚠️ **Ambiguity Gray Zone (0.40–0.60):** Similarity fell into gray zone; triggered agentic conditional re-search.")
+    else:
+        trust_card_md.append("- 🟢 **Low Uncertainty:** Pairwise lineage relationships clearly distinguished direct copies from independent reporting.")
+    trust_card_md.append("- 📌 *Heavily paraphrased reports with low lexical overlap are marked as low confidence rather than forced as false matches.*")
 
     return "\n".join(trust_card_md)
 

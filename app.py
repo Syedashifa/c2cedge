@@ -116,7 +116,7 @@ async def upload_document(
     thread_id: str = Form(...)
 ):
     try:
-        allowed_extensions = [".pdf", ".docx", ".txt", ".md", ".py", ".csv"]
+        allowed_extensions = [".pdf", ".docx", ".txt", ".md", ".py", ".csv", ".jpeg", ".jpg", ".png", ".webp"]
 
         filename = file.filename or "uploaded_file"
         suffix = Path(filename).suffix.lower()
@@ -125,7 +125,7 @@ async def upload_document(
             return JSONResponse(
                 {
                     "success": False,
-                    "message": "Unsupported file type. Upload PDF, DOCX, TXT, MD, PY, or CSV."
+                    "message": "Unsupported file type. Upload JPEG, JPG, PNG, WEBP, PDF, DOCX, TXT, MD, PY, or CSV."
                 },
                 status_code=400
             )
