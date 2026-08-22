@@ -28,14 +28,13 @@ from tools import tools
 
 Path("data").mkdir(exist_ok=True)
 
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL") or os.getenv("GOOGLE_MODEL") or "gemini-3.5-flash"
+DEFAULT_MODEL = os.getenv("GEMINI_MODEL") or os.getenv("GOOGLE_MODEL") or "gemini-2.5-flash"
 
 ALLOWED_MODELS = {
+    "gemini-2.5-flash",
     "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
-    "gemini-3.6-flash",
-    "gemini-2.5-flash",
-    "gemini-1.5-flash"
+    "gemini-3.6-flash"
 }
 
 
@@ -97,10 +96,10 @@ def build_agent(model_name: str):
             return {"messages": [response]}
         except Exception as e:
             err_str = str(e).lower()
-            if "429" in err_str or "quota" in err_str or "resource_exhausted" in err_str:
-                # Automatic failover to gemini-1.5-flash when rate limit / quota hit!
+            if "429" in err_str or "quota" in err_str or "resource_exhausted" in err_str or "404" in err_str:
+                # Automatic failover to gemini-2.5-flash when rate limit / quota hit!
                 fallback_llm = ChatGoogleGenerativeAI(
-                    model="gemini-1.5-flash",
+                    model="gemini-2.5-flash",
                     google_api_key=api_key,
                     temperature=0.2,
                     streaming=True

@@ -2111,11 +2111,17 @@
             removeThinkingIndicator();
 
             if (data.success) {
-                addMessage(
-                    "assistant",
-                    data.message + "\n\nYou can now ask questions about this document."
-                );
-                await loadConversations();
+                if (data.is_media) {
+                    messageInput.value = `Analyze uploaded image media file '${data.file_path}' (${file.name}): Detect if it is real or fake deepfake, inspect visual artifacts, and extract text claims.`;
+                    autoResize(messageInput);
+                    sendMessage();
+                } else {
+                    addMessage(
+                        "assistant",
+                        data.message + "\n\nYou can now ask questions about this document."
+                    );
+                    await loadConversations();
+                }
             } else {
                 addMessage("assistant", "Upload failed: " + data.message);
             }

@@ -144,9 +144,14 @@ async def upload_document(
             thread_id=thread_id
         )
 
+        is_media = suffix in [".jpeg", ".jpg", ".png", ".webp", ".mp4", ".mov", ".avi", ".mp3", ".wav"]
+
         return JSONResponse({
             "success": True,
-            "message": f"Uploaded {result['filename']} and created {result['chunks']} chunks."
+            "file_path": file_path,
+            "filename": filename,
+            "is_media": is_media,
+            "message": f"Uploaded {result['filename']} ({'Image/Media Target' if is_media else 'Document'}) successfully."
         })
 
     except Exception as e:
