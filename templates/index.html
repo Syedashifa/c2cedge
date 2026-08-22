@@ -1041,6 +1041,17 @@
             transform: none;
         }
 
+        .send-btn.stop-btn {
+            background: #EF4444 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.45) !important;
+        }
+
+        .send-btn.stop-btn:hover {
+            background: #DC2626 !important;
+            transform: translateY(-1px);
+        }
+
         .notice-text {
             color: var(--text-dim);
             font-size: 11.5px;
@@ -1248,7 +1259,7 @@
                     </select>
                 </div>
 
-                <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send claim">
+                <button class="send-btn" id="sendBtn" onclick="handleSendOrStop()" title="Send claim">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="19" x2="12" y2="5"/>
                         <polyline points="5 12 12 5 19 12"/>
@@ -1881,7 +1892,55 @@
         }
     }
 
+    let currentAbortController = null;
+    let isGenerating = false;
+
+    function setSendBtnState(generating) {
+        isGenerating = generating;
+        if (generating) {
+            sendBtn.classList.add("stop-btn");
+            sendBtn.title = "Stop generating (Esc)";
+            sendBtn.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="5" y="5" width="14" height="14" rx="2"/>
+                </svg>
+            `;
+        } else {
+            sendBtn.classList.remove("stop-btn");
+            sendBtn.title = "Send claim";
+            sendBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5"/>
+                    <polyline points="5 12 12 5 19 12"/>
+                </svg>
+            `;
+        }
+    }
+
+    function stopGeneration() {
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
+        removeThinkingIndicator();
+        setSendBtnState(false);
+        statusText.innerHTML = '<span class="status-pulse-dot" style="background:#ef4444; box-shadow:0 0 10px #ef4444;"></span> Stopped';
+    }
+
+    function handleSendOrStop() {
+        if (isGenerating) {
+            stopGeneration();
+        } else {
+            sendMessage();
+        }
+    }
+
     async function sendMessage() {
+        if (isGenerating) {
+            stopGeneration();
+            return;
+        }
+
         const message = messageInput.value.trim();
         if (!message) return;
 
@@ -1891,19 +1950,18 @@
 
         const selectedModel = modelSelect ? modelSelect.value : "gemini-3.5-flash";
 
-        // Add user question (styled in vibrant purple gradient, NO icon)
         addMessage("user", message);
         updateChatHeader(message, currentMessageCount);
 
         messageInput.value = "";
         messageInput.style.height = "auto";
 
-        sendBtn.disabled = true;
+        currentAbortController = new AbortController();
+        setSendBtnState(true);
 
         const toolReasoningLabel = detectLikelyTool(message);
         statusText.innerHTML = `<span class="status-pulse-dot"></span> ${toolReasoningLabel}...`;
 
-        // Show glowing reasoning/thinking dot
         showThinkingIndicator(toolReasoningLabel);
 
         const botElement = addMessage("assistant", "");
@@ -1954,6 +2012,7 @@
                 headers: {
                     "Content-Type": "application/json"
                 },
+                signal: currentAbortController.signal,
                 body: JSON.stringify({
                     message: message,
                     thread_id: threadId,
@@ -2006,13 +2065,23 @@
             }
 
         } catch (error) {
-            console.error("Streaming error:", error);
-            removeThinkingIndicator();
-            botElement.textContent = "Something went wrong: " + error.message;
+            if (error.name === 'AbortError') {
+                console.log("Generation stopped by user.");
+                if (!botElement.dataset.rawText) {
+                    botElement.innerHTML = "<em>⏹️ Thinking / generation stopped by user.</em>";
+                }
+            } else {
+                console.error("Streaming error:", error);
+                removeThinkingIndicator();
+                botElement.textContent = "Something went wrong: " + error.message;
+            }
         } finally {
             removeThinkingIndicator();
-            sendBtn.disabled = false;
-            statusText.innerHTML = '<span class="status-pulse-dot"></span> Ready';
+            setSendBtnState(false);
+            currentAbortController = null;
+            if (!statusText.innerHTML.includes("Stopped")) {
+                statusText.innerHTML = '<span class="status-pulse-dot"></span> Ready';
+            }
             messageInput.focus();
             await loadConversations();
         }
