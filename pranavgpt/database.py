@@ -50,18 +50,6 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-def clear_all_conversations():
-    db = SessionLocal()
-    try:
-        db.query(ChatMessage).delete()
-        db.query(Conversation).delete()
-        db.query(LongTermMemory).delete()
-        db.commit()
-        return "All previous database conversations and memory wiped successfully."
-    finally:
-        db.close()
-
-
 def create_or_update_conversation(thread_id: str, first_message: str | None = None):
     db = SessionLocal()
 
