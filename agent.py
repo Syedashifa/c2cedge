@@ -92,8 +92,22 @@ def build_agent(model_name: str):
 
     async def chatbot_node(state: MessagesState):
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
-        response = await llm_with_tools.ainvoke(messages)
-        return {"messages": [response]}
+        try:
+            response = await llm_with_tools.ainvoke(messages)
+            return {"messages": [response]}
+        except Exception as e:
+            err_str = str(e).lower()
+            if "429" in err_str or "quota" in err_str or "resource_exhausted" in err_str:
+                # Automatic failover to gemini-1.5-flash when rate limit / quota hit!
+                fallback_llm = ChatGoogleGenerativeAI(
+                    model="gemini-1.5-flash",
+                    google_api_key=api_key,
+                    temperature=0.2,
+                    streaming=True
+                ).bind_tools(tools)
+                response = await fallback_llm.ainvoke(messages)
+                return {"messages": [response]}
+            raise e
 
     tool_node = ToolNode(tools)
 

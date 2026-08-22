@@ -297,8 +297,38 @@ def generate_image(prompt: str) -> str:
         return f"❌ Failed to generate image: {str(e)}"
 
 
+@tool
+def detect_image_deepfake(image_input: str) -> str:
+    """
+    Detects AI Deepfake image manipulations, synthetic visual artifacts, face swaps, and OCR text claims in images.
+    Uses Hive AI API and EasyOCR engine.
+    """
+    return detect_deepfake_media(image_input, media_type="image")
+
+
+@tool
+def detect_video_deepfake(video_input: str) -> str:
+    """
+    Detects AI Deepfake video manipulations, face swaps, synthetic video frames, and temporal anomalies.
+    Uses Reality Defender Video Scanner API.
+    """
+    return detect_deepfake_media(video_input, media_type="video")
+
+
+@tool
+def detect_audio_deepfake(audio_input: str) -> str:
+    """
+    Detects AI Voice cloning, synthetic voice audio, TTS voice synthesis, and audio deepfakes.
+    Uses Resemble AI Voice Authenticity API.
+    """
+    return detect_deepfake_media(audio_input, media_type="voice")
+
+
 tools = [
     detect_deepfake_media,
+    detect_image_deepfake,
+    detect_video_deepfake,
+    detect_audio_deepfake,
     trace_claim_lineage,
     web_search,
     search_uploaded_documents,
