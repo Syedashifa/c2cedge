@@ -1221,7 +1221,7 @@
                     type="file"
                     id="fileInput"
                     style="display: none;"
-                    accept=".pdf,.docx,.txt,.md,.py,.csv"
+                    accept=".pdf,.docx,.txt,.md,.py,.csv,.jpeg,.jpg,.png,.webp,.mp4,.mp3,.wav"
                     onchange="uploadFile()"
                 >
 
@@ -2132,6 +2132,55 @@
 
         statusText.innerHTML = '<span class="status-pulse-dot"></span> Ready';
         fileInput.value = "";
+    }
+
+    // Ctrl+V / Cmd+V Clipboard Image & Screenshot Paste Handler
+    document.addEventListener("paste", function (event) {
+        const clipboardItems = (event.clipboardData || event.originalEvent.clipboardData).items;
+        for (let i = 0; i < clipboardItems.length; i++) {
+            const item = clipboardItems[i];
+            if (item.kind === "file" && item.type.indexOf("image") !== -1) {
+                const blob = item.getAsFile();
+                const pastedFile = new File([blob], `pasted_screenshot_${Date.now()}.png`, { type: item.type });
+                handlePastedImageFile(pastedFile);
+                event.preventDefault();
+                break;
+            }
+        }
+    });
+
+    async function handlePastedImageFile(file) {
+        addMessage("user", `📋 Pasted screenshot image: ${file.name}`);
+
+        showThinkingIndicator(`Uploading & analyzing pasted image...`);
+        statusText.innerHTML = '<span class="status-pulse-dot"></span> Ingesting pasted image...';
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("thread_id", threadId);
+
+        try {
+            const response = await fetch("/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+            removeThinkingIndicator();
+
+            if (data.success) {
+                messageInput.value = `Analyze pasted image target '${data.file_path}': Determine if REAL or FAKE, inspect deepfake visual artifacts, and extract text claims.`;
+                autoResize(messageInput);
+                sendMessage();
+            } else {
+                addMessage("assistant", "Pasted image upload failed: " + data.message);
+            }
+        } catch (error) {
+            removeThinkingIndicator();
+            addMessage("assistant", "Pasted image upload failed: " + error.message);
+        }
+
+        statusText.innerHTML = '<span class="status-pulse-dot"></span> Ready';
     }
 
     async function newChat() {

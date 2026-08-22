@@ -215,8 +215,10 @@ def run_full_deepfake_analysis(media_input: str, media_type: str = "auto") -> Di
     # Aggregate Deepfake Threat Verdict
     overall_score = round((results["hive_image"].get("confidence", 0.9) + results["reality_defender_video"].get("score", 0.89) + results["grok_vision"].get("confidence", 0.94)) / 3.0 * 100, 1)
     
+    verdict_label = "🚨 FAKE / SYNTHETIC MEDIA DETECTED" if overall_score >= 60 else "🟢 REAL / AUTHENTIC MEDIA"
+
     return {
-        "verdict": "🚨 SYNTHETIC DEEPFAKE DETECTED" if overall_score > 70 else "🟢 AUTHENTIC MEDIA",
+        "verdict": verdict_label,
         "overall_deepfake_score": overall_score,
         "media_input": media_input,
         "services_breakdown": results
