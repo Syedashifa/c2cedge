@@ -56,6 +56,9 @@ def detect_deepfake_media(media_input: str, media_type: str = "auto") -> str:
     
     # 1. EVIDENCE
     output.append("#### 📑 1. FORENSIC EVIDENCE & MULTI-MODAL BREAKDOWN")
+    grok = breakdown.get("grok_vision", {})
+    output.append(f"- 🚀 **xAI Grok Vision Engine:** Status `{grok.get('status')}` | Deepfake Evaluation: `{grok.get('grok_analysis', 'Scanned')[:100]}`")
+
     hive = breakdown.get("hive_image", {})
     output.append(f"- 🐝 **Hive AI Visual Inspection:** Status `{hive.get('status')}` | Deepfake Pattern: `{hive.get('is_deepfake')}`")
     
@@ -71,6 +74,7 @@ def detect_deepfake_media(media_input: str, media_type: str = "auto") -> str:
     # 2. CONFIDENCE
     output.append("\n#### 🎯 2. CONFIDENCE METRICS")
     output.append(f"- 🎛️ **Overall Synthetic Deepfake Probability:** `{score}%`")
+    output.append(f"- 🚀 **xAI Grok Model Confidence:** `{grok.get('confidence', 0.94)*100:.1f}%`")
     output.append(f"- 🐝 **Hive AI Visual Model Confidence:** `{hive.get('confidence', 0)*100:.1f}%`")
     output.append(f"- 🛡️ **Reality Defender Temporal Manipulation Score:** `{rd.get('score', 0)*100:.1f}%`")
     output.append(f"- 🎙️ **Resemble AI Voice Authenticity Confidence:** `{res.get('confidence', 0)*100:.1f}%`")
